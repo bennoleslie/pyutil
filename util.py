@@ -60,3 +60,43 @@ def import_from_dir(module_name, dir_name):
             sys.modules[module_name] = saved_module
         else:
             del sys.modules[module_name]
+
+
+def dict_inverse(dct, exact=False):
+    """Given an input dictionary (`dct`), create a new dictionary
+    where the keys are indexed by the values. In the original
+    dictionary multiple keys may reference the same value, so the
+    values in the new dictionary is a list of keys. The order of keys
+    in the list is undefined.
+
+    Example:
+
+    > dict_inverse({1: 'a', 2: 'a', 3: 'c'})
+    { 'a': [1, 2], 'c': [3]
+
+    If `dct` has an exact inverse mapping `exact` can be passed as
+    True. In this case, the values will be just the original key (not
+    a list).
+
+    Example:
+
+    > dict_inverse({1: 'a', 2: 'b', 3: 'c'}, exact=True)
+    { 'a': 1, 'b': 2, 'c': 3}
+
+    Note: No checking is done when exact is True, so in the case
+    where there are multiple keys mapping the same value it is
+    undefined as to which key the value will map to.
+
+    """
+    if exact:
+        return {value: key for key, value in dct.items()}
+
+    r = {}
+    for key, value in dct.items():
+        r.setdefault(value, []).append(key)
+    return r
+
+
+def test_dict_inverse():
+    assert dict_inverse({1: 'a', 2: 'a', 3: 'c'}) == {'a': [1, 2], 'c': [3]}
+    assert dict_inverse({1: 'a', 2: 'b', 3: 'c'}, True) == {'a': 1, 'b': 2, 'c': 3}
