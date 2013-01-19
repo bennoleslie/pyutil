@@ -2,6 +2,10 @@
 own library."""
 
 import bisect
+import os
+import unittest
+from contextlib import contextmanager
+
 
 class Location:
     def __init__(self, name, line, col):
@@ -97,6 +101,69 @@ def dict_inverse(dct, exact=False):
     return r
 
 
-def test_dict_inverse():
-    assert dict_inverse({1: 'a', 2: 'a', 3: 'c'}) == {'a': [1, 2], 'c': [3]}
-    assert dict_inverse({1: 'a', 2: 'b', 3: 'c'}, True) == {'a': 1, 'b': 2, 'c': 3}
+
+
+@contextmanager
+def chdir(path):
+    """Current-working directory context manager.
+
+    Makes the current working directory the specified `path` for the
+    duration of the context.
+
+    Example:
+
+    with chdir("newdir"):
+        # Do stuff in the new directory
+        pass
+
+    """
+    cwd = os.getcwd()
+    os.chdir(path)
+    yield
+    os.chdir(cwd)
+
+
+@contextmanager
+def umask(new_mask):
+    """unmask context manager.
+
+    Makes `new_mask` the current mask, and restores the previous umask
+    after the context closes.
+
+    """
+    cur_mask = os.umask(new_mask)
+    yield
+    os.umask(cur_mask)
+
+
+@contextmanager
+def update_env(env):
+    """os.environ context manager.
+
+    Updates os.environ with the specified `env` for the duration of the context.
+
+    """
+    old_env = {}
+    for key in env:
+        old_env[key] = os.environ.get(key)
+        os.environ[key] = env[key]
+
+    yield
+
+    for key in old_env:
+        if old_env[key] is None:
+            del os.environ[key]
+        else:
+            os.environ[key] = old_env[key]
+
+class TestUtil(unittest.TestCase):
+
+    def test_chdir(self):
+        cur = os.getcwd()
+        with chdir('/'):
+            assert os.getcwd() == '/'
+        assert os.getcwd() == cur
+
+    def test_dict_inverse(self):
+        assert dict_inverse({1: 'a', 2: 'a', 3: 'c'}) == {'a': [1, 2], 'c': [3]}
+        assert dict_inverse({1: 'a', 2: 'b', 3: 'c'}, True) == {'a': 1, 'b': 2, 'c': 3}
