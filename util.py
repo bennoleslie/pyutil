@@ -4,6 +4,8 @@ own library."""
 import bisect
 import contextlib
 import os
+import shutil
+import tempfile
 import unittest
 from functools import wraps
 
@@ -218,6 +220,13 @@ def update_env(env):
             os.environ[key] = old_env[key]
 
 
+@simplecontextmanager
+def tempdir():
+    tmpdir = tempfile.mkdtemp()
+    yield tmpdir
+    shutil.rmtree(tmpdir)
+
+
 class TestUtil(unittest.TestCase):
 
     def test_chdir(self):
@@ -325,3 +334,23 @@ class TestUtil(unittest.TestCase):
             assert after is None
         else:
             assert False
+
+    def test_tempdir(self):
+        tempdir_name = None
+        with tempdir() as t:
+            tempdir_name = t
+            assert os.path.exists(tempdir_name)
+
+        assert not os.path.exists(tempdir_name)
+
+        try:
+            with tempdir() as t:
+                tempdir_name = t
+                assert os.path.exists(tempdir_name)
+                raise Exception('tempdir_with_fail')
+        except Exception as exc:
+            assert exc.args == ('tempdir_with_fail', )
+        else:
+            assert False
+
+        assert not os.path.exists(tempdir_name)
