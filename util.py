@@ -227,6 +227,24 @@ def tempdir():
     shutil.rmtree(tmpdir)
 
 
+def touch(path):
+    """Create an empty file (just like the unix touch command)."""
+    open(path, 'w').close()
+
+
+def file_list(root, full_path=False, sort=True):
+    if not root.endswith('/'):
+        root += '/'
+    for base, dirs, files in os.walk(root):
+        if sort:
+            dirs.sort()
+            files.sort()
+        if not full_path:
+            base = base[len(root):]
+        for f in files:
+            yield os.path.join(base, f)
+
+
 class TestUtil(unittest.TestCase):
 
     def test_chdir(self):
@@ -354,3 +372,11 @@ class TestUtil(unittest.TestCase):
             assert False
 
         assert not os.path.exists(tempdir_name)
+
+    def test_file_list(self):
+        with tempdir() as t:
+            touch(os.path.join(t, 'b'))
+            touch(os.path.join(t, 'a'))
+            os.mkdir(os.path.join(t, 'c'))
+            touch(os.path.join(t, 'c', '1'))
+            assert list(file_list(t)) == ['a', 'b', 'c/1']
