@@ -2,9 +2,10 @@
 own library."""
 
 import bisect
+import contextlib
 import os
 import unittest
-from contextlib import contextmanager
+from functools import wraps
 
 
 class Location:
@@ -101,9 +102,69 @@ def dict_inverse(dct, exact=False):
     return r
 
 
+class _GeneratorSimpleContextManager(contextlib._GeneratorContextManager):
+    """Helper for @simplecontextmanager decorator."""
+
+    def __exit__(self, type, value, traceback):
+        if type is None:
+            try:
+                next(self.gen)
+            except StopIteration:
+                return
+            else:
+                raise RuntimeError("generator didn't stop")
+        else:
+            if value is None:
+                # Need to force instantiation so we can reliably
+                # tell if we get the same exception back
+                value = type()
+
+            try:
+                next(self.gen)
+            except StopIteration as exc:
+                # Suppress the exception *unless* it's the same exception that
+                # was passed to throw().  This prevents a StopIteration
+                # raised inside the "with" statement from being suppressed
+                return exc is not value
+            else:
+                raise RuntimeError("generator didn't stop")
+            finally:
+                return False
 
 
-@contextmanager
+def simplecontextmanager(func):
+    """@simplecontextmanager decorator.
+
+    Typical usage:
+
+        @simplecontextmanager
+        def some_generator(<arguments>):
+            <setup>
+            yield <value>
+            <cleanup>
+
+    This makes this:
+
+        with some_generator(<arguments>) as <variable>:
+            <body>
+
+    equivalent to this:
+
+        <setup>
+        try:
+            <variable> = <value>
+            <body>
+        finally:
+            <cleanup>
+
+    """
+    @wraps(func)
+    def helper(*args, **kwds):
+        return _GeneratorSimpleContextManager(func, *args, **kwds)
+    return helper
+
+
+@simplecontextmanager
 def chdir(path):
     """Current-working directory context manager.
 
@@ -123,7 +184,7 @@ def chdir(path):
     os.chdir(cwd)
 
 
-@contextmanager
+@simplecontextmanager
 def umask(new_mask):
     """unmask context manager.
 
@@ -136,7 +197,7 @@ def umask(new_mask):
     os.umask(cur_mask)
 
 
-@contextmanager
+@simplecontextmanager
 def update_env(env):
     """os.environ context manager.
 
@@ -156,6 +217,7 @@ def update_env(env):
         else:
             os.environ[key] = old_env[key]
 
+
 class TestUtil(unittest.TestCase):
 
     def test_chdir(self):
@@ -167,3 +229,99 @@ class TestUtil(unittest.TestCase):
     def test_dict_inverse(self):
         assert dict_inverse({1: 'a', 2: 'a', 3: 'c'}) == {'a': [1, 2], 'c': [3]}
         assert dict_inverse({1: 'a', 2: 'b', 3: 'c'}, True) == {'a': 1, 'b': 2, 'c': 3}
+
+    def test_simplecontextmanager(self):
+        before = None
+        after = None
+
+        @simplecontextmanager
+        def foo():
+            nonlocal before
+            nonlocal after
+            after = None
+            before = True
+            yield 1
+            after = True
+
+        with foo() as x:
+            assert x == 1
+            assert before
+            assert after is None
+        assert before
+        assert after
+
+        try:
+            with foo() as x:
+                assert x == 1
+                assert before
+                assert after is None
+                raise Exception('check')
+        except Exception as exc:
+            assert exc.args == ('check', )
+            assert before
+            assert after
+        else:
+            assert False
+
+    def test_simplecontextmanager_double_yield(self):
+        before = None
+        after = None
+
+        @simplecontextmanager
+        def foo():
+            nonlocal before
+            nonlocal after
+            after = None
+            before = True
+            yield 1
+            yield 2
+            after = True
+
+        try:
+            with foo() as x:
+                assert x == 1
+                assert before
+                assert after is None
+        except RuntimeError as exc:
+            assert exc.args == ("generator didn't stop", )
+        else:
+            assert False
+
+
+    def test_simplecontextmanager_raise(self):
+        before = None
+        after = None
+
+        @simplecontextmanager
+        def foo():
+            nonlocal before
+            nonlocal after
+            after = None
+            before = True
+            yield 1
+            raise Exception("with")
+
+        try:
+            with foo() as x:
+                assert x == 1
+                assert before
+                assert after is None
+        except Exception as exc:
+            assert exc.args == ('with', )
+            assert before
+            assert after is None
+        else:
+            assert False
+
+        try:
+            with foo() as x:
+                assert x == 1
+                assert before
+                assert after is None
+                raise Exception("check")
+        except Exception as exc:
+            assert exc.args == ('check', )
+            assert before
+            assert after is None
+        else:
+            assert False
