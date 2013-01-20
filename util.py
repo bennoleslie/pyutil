@@ -5,6 +5,7 @@ import bisect
 import contextlib
 import os
 import shutil
+import signal
 import tempfile
 import unittest
 from functools import wraps
@@ -245,6 +246,15 @@ def file_list(root, full_path=False, sort=True):
             yield os.path.join(base, f)
 
 
+SIG_NAMES = dict((k, v) for v, k in signal.__dict__.items() if v.startswith('SIG'))
+def show_exit(exit_code):
+    sig_num = exit_code & 0xff
+    exit_status = exit_code >> 8
+    if sig_num == 0:
+        return "exit: {}".format(exit_status)
+    else:
+        return "signal: {}".format(SIG_NAMES.get(sig_num, 'Unknown signal {}'.format(sig_num)))
+
 class TestUtil(unittest.TestCase):
 
     def test_chdir(self):
@@ -380,3 +390,8 @@ class TestUtil(unittest.TestCase):
             os.mkdir(os.path.join(t, 'c'))
             touch(os.path.join(t, 'c', '1'))
             assert list(file_list(t)) == ['a', 'b', 'c/1']
+
+    def test_show_exit(self):
+        assert show_exit(os.system("exit 1")) == "exit: 1"
+        assert show_exit(os.system("exit 2")) == "exit: 2"
+        assert show_exit(os.system("kill -9 $$")) == "signal: SIGKILL"
