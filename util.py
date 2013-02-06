@@ -395,3 +395,19 @@ class TestUtil(unittest.TestCase):
         assert show_exit(os.system("exit 1")) == "exit: 1"
         assert show_exit(os.system("exit 2")) == "exit: 2"
         assert show_exit(os.system("kill -9 $$")) == "signal: SIGKILL"
+
+
+def get_gcc_headers():
+    """Get the header locations."""
+    output = subprocess.check_output(["arm-none-eabi-cpp", "-Wp,-v"], stderr=subprocess.STDOUT, stdin=subprocess.PIPE).decode().splitlines()
+    start = False
+    include_paths = []
+    for line in output:
+        if not start and line == '#include <...> search starts here:':
+            start = True
+        elif start:
+            if line == 'End of search list.':
+                break
+            else:
+                include_paths.append(line.strip())
+    return include_paths
