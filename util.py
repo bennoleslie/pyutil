@@ -3,13 +3,14 @@ own library."""
 
 import bisect
 import contextlib
+import inspect
 import os
 import shutil
 import signal
+import sys
 import tempfile
 import unittest
 from functools import wraps
-
 
 class Location:
     def __init__(self, name, line, col):
@@ -423,3 +424,30 @@ def dict_inverse(d):
 
 def debug(msg):
     print(msg.format(**inspect.stack()[1][0].f_locals))
+
+
+class SysExit(Exception):
+    def __init__(self, code, msg=None):
+        super().__init__()
+        self.code = code
+        self.msg = msg
+
+
+def script():
+    s = inspect.stack()[1][0]
+    caller_name = s.f_locals['__name__']
+    if caller_name != '__main__':
+        return
+
+    caller_main = s.f_locals.get('main')
+    try:
+        sys.exit(caller_main())
+    except SysExit as e:
+        if e.msg:
+            print(e.msg, file=sys.stderr)
+        sys.exit(e.code)
+    except KeyboardInterrupt:
+        # FIXME: This could probably be handled
+        # better to match the Ctrl-C signal exit
+        # code
+        sys.exit(1)
