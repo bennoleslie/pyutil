@@ -418,10 +418,6 @@ def range1(n):
     yield from range(1, n + 1)
 
 
-def dict_inverse(d):
-    return { value: key for key, value in d.items() }
-
-
 def debug(msg):
     print(msg.format(**inspect.stack()[1][0].f_locals))
 
