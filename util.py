@@ -447,3 +447,8 @@ def script():
         # better to match the Ctrl-C signal exit
         # code
         sys.exit(1)
+
+
+def camelify(name):
+    """Change from foo_bar => FooBar"""
+    return ''.join([i.capitalize() for i in name.split('_')])
