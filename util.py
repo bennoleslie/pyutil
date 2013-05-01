@@ -436,6 +436,9 @@ def script():
         return
 
     caller_main = s.f_locals.get('main')
+    if caller_main is None:
+        print("main() not found.", file=sys.stderr)
+        sys.exit(1)
     try:
         sys.exit(caller_main())
     except SysExit as e:
