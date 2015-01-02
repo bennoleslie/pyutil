@@ -5,7 +5,7 @@ to some of the motivations.
 """
 
 from operator import itemgetter
-
+from collections import OrderedDict
 
 def __namedfield_repr(self):
     'Return a nicely formatted representation string'
@@ -27,6 +27,11 @@ def __namedfield_getnewargs(self):
 def __namedfield_getstate(self):
     'Exclude the OrderedDict from pickling'
     return None
+
+# Init helpers
+def __namedfield_checked_init(cls, val):
+    val._check()
+    return val
 
 
 @classmethod
@@ -51,8 +56,16 @@ def namedfields(*fields):
         if not issubclass(cls, tuple):
             raise TypeError("namefields decorated classes must be subclass of tuple")
 
+        enable_checks = hasattr(cls, '_check')
+
         str_fields = ", ".join(fields)
-        new_method = eval("lambda cls, {}: tuple.__new__(cls, ({}))".format(str_fields, str_fields), {}, {})
+        tuple_arg = str_fields + ', ' if len(fields) else ''
+        if enable_checks:
+            meth = "lambda cls, {}: cls._checked_init(tuple.__new__(cls, ({})))".format(str_fields, tuple_arg)
+        else:
+            meth = "lambda cls, {}: tuple.__new__(cls, ({}))".format(str_fields, tuple_arg)
+
+        new_method = eval(meth, {}, {})
 
         attrs = {
             '__slots__': (),
@@ -66,6 +79,9 @@ def namedfields(*fields):
             '_make': __namedfield_make,
             '_replace': __namedfield_replace,
         }
+
+        if enable_checks:
+            attrs['_checked_init'] = classmethod(__namedfield_checked_init)
 
         attrs.update({fld: property(itemgetter(idx), doc='Alias for field number {}'.format(idx))
                       for idx, fld in enumerate(fields)})
@@ -89,7 +105,8 @@ def extendedfields(*fields):
             raise TypeError("extendednamedfield decorated classes must subclass a class decorate by namedfields")
 
         str_fields = ", ".join(base_fields + fields)
-        new_method = eval("lambda cls, {}: tuple.__new__(cls, ({}))".format(str_fields, str_fields))
+        tuple_arg = str_fields + ', ' if len(fields) else ''
+        new_method = eval("lambda cls, {}: tuple.__new__(cls, ({}))".format(str_fields, tuple_arg))
 
         attrs = {
             '__slots__': (),
