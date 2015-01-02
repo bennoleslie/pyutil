@@ -477,6 +477,11 @@ def attr_dict(itr, attr):
     return {getattr(x, attr): x for x in itr}
 
 
+def attr_dict_frozen(itr, attr):
+    """Given an iterable create a dictionary of the values indexed by a named attribute."""
+    return frozendict(attr_dict(itr, attr))
+
+
 class frozendict(dict):
     """Inspired from: http://code.activestate.com/recipes/414283-frozen-dictionaries/"""
     __slots__ = ('_hash')
