@@ -467,3 +467,8 @@ def yield_until_exception(exception, fn):
             yield fn()
         except exception:
             break
+
+
+def attr_dict(itr, attr):
+    """Given an iterable create a dictionary of the values indexed by a named attribute."""
+    return {getattr(x, attr): x for x in itr}
