@@ -477,6 +477,13 @@ def attr_dict(itr, attr):
     return {getattr(x, attr): x for x in itr}
 
 
+def attr_dict_grouped(itr, attr):
+    d = {}
+    for v in itr:
+        d.setdefault(getattr(v, attr), []).append(v)
+    return d
+
+
 def attr_dict_frozen(itr, attr):
     """Given an iterable create a dictionary of the values indexed by a named attribute."""
     return frozendict(attr_dict(itr, attr))
