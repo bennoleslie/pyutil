@@ -51,7 +51,7 @@ def __namedfield_replace(_self, **kwds):
     return result
 
 
-def namedfields(*fields):
+def namedfields(*fields, defaults={}):
     def inner(cls):
         if not issubclass(cls, tuple):
             raise TypeError("namefields decorated classes must be subclass of tuple")
@@ -60,10 +60,11 @@ def namedfields(*fields):
 
         str_fields = ", ".join(fields)
         tuple_arg = str_fields + ', ' if len(fields) else ''
+        args = ", ".join(x if x not in defaults else "{}={}".format(x, defaults[x]) for x in fields)
         if enable_checks:
-            meth = "lambda cls, {}: cls._checked_init(tuple.__new__(cls, ({})))".format(str_fields, tuple_arg)
+            meth = "lambda cls, {}: cls._checked_init(tuple.__new__(cls, ({})))".format(args, tuple_arg)
         else:
-            meth = "lambda cls, {}: tuple.__new__(cls, ({}))".format(str_fields, tuple_arg)
+            meth = "lambda cls, {}: tuple.__new__(cls, ({}))".format(args, tuple_arg)
 
         new_method = eval(meth, {}, {})
 
