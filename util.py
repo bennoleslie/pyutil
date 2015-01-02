@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from functools import wraps
 
+
 class Location:
     def __init__(self, name, line, col):
         self.name = name
@@ -248,6 +249,8 @@ def file_list(root, full_path=False, sort=True):
 
 
 SIG_NAMES = dict((k, v) for v, k in signal.__dict__.items() if v.startswith('SIG'))
+
+
 def show_exit(exit_code):
     sig_num = exit_code & 0xff
     exit_status = exit_code >> 8
@@ -255,6 +258,7 @@ def show_exit(exit_code):
         return "exit: {}".format(exit_status)
     else:
         return "signal: {}".format(SIG_NAMES.get(sig_num, 'Unknown signal {}'.format(sig_num)))
+
 
 class TestUtil(unittest.TestCase):
 
@@ -324,7 +328,6 @@ class TestUtil(unittest.TestCase):
             assert exc.args == ("generator didn't stop", )
         else:
             assert False
-
 
     def test_simplecontextmanager_raise(self):
         before = None
@@ -472,3 +475,30 @@ def yield_until_exception(exception, fn):
 def attr_dict(itr, attr):
     """Given an iterable create a dictionary of the values indexed by a named attribute."""
     return {getattr(x, attr): x for x in itr}
+
+
+class frozendict(dict):
+    """Inspired from: http://code.activestate.com/recipes/414283-frozen-dictionaries/"""
+    __slots__ = ('_hash')
+
+    @property
+    def _blocked_attribute(obj):
+        raise AttributeError("A frozendict cannot be modified.")
+
+    __delitem__ = __setitem__ = clear = _blocked_attribute
+    pop = popitem = setdefault = update = _blocked_attribute
+
+    def __new__(cls, *args):
+        new = dict.__new__(cls)
+        dict.__init__(new, *args)
+        new._hash = hash(frozenset(new.items()))
+        return new
+
+    def __init__(self, *args):
+        pass
+
+    def __hash__(self):
+        return self._hash
+
+    def __repr__(self):
+        return "frozendict(%s)" % dict.__repr__(self)
