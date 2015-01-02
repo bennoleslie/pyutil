@@ -514,3 +514,12 @@ class frozendict(dict):
 
     def __repr__(self):
         return "frozendict(%s)" % dict.__repr__(self)
+
+
+def split_inclusive(lst, condition):
+    start = 0
+    for idx in range(len(lst)):
+        if condition(lst[idx]):
+            yield lst[start:idx]
+            start = idx
+    yield lst[start:]
