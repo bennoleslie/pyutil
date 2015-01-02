@@ -455,3 +455,15 @@ def script():
 def camelify(name):
     """Change from foo_bar => FooBar"""
     return ''.join([i.capitalize() for i in name.split('_')])
+
+
+def yield_until_exception(exception, fn):
+    """Generate values be repeatedly calling fn() until the specified exception
+    is raised.
+
+    """
+    while True:
+        try:
+            yield fn()
+        except exception:
+            break
