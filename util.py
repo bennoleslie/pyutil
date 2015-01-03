@@ -529,3 +529,24 @@ def tuple_gen(obj, name_x, name_y):
     for x in getattr(obj, name_x):
         for y in getattr(x, name_y):
             yield x, y
+
+
+def dict_grouped_by_key(itr, key):
+    d = {}
+    for v in itr:
+        d.setdefault(key(v), []).append(v)
+    return d
+
+
+def find_duplicates_by_key(itr, key):
+    kv = dict_grouped_by_key(itr, key)
+    return {k: v for k, v in kv.items() if len(v) > 1}
+
+
+def remove_duplicates_by_key(itr, key):
+    seen = set()
+    for v in itr:
+        k = key(v)
+        if k not in seen:
+            yield v
+            seen.add(k)
