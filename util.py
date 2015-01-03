@@ -523,3 +523,9 @@ def split_inclusive(lst, condition):
             yield lst[start:idx]
             start = idx
     yield lst[start:]
+
+
+def tuple_gen(obj, name_x, name_y):
+    for x in getattr(obj, name_x):
+        for y in getattr(x, name_y):
+            yield x, y
